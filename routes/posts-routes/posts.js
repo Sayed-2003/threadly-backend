@@ -21,4 +21,42 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET posts from a community
+router.get("/community/:communityId", async (req, res) => {
+  try {
+    const communityId = req.params.communityId;
+
+    if (!mongoose.isValidObjectId(communityId)) {
+      return res.status(400).json({
+        message: "Invalid community ID",
+      });
+    }
+
+    const foundCommunity = await Community.findOne({
+      _id: communityId,
+      isDeleted: false,
+    });
+
+    if (!foundCommunity) {
+      return res.status(404).json({
+        message: "Community not found",
+      });
+    }
+
+    const posts = await Post.find({
+      community: communityId,
+      isDeleted: false,
+    })
+      .populate("author", "username")
+      .populate("community", "name");
+
+    res.json(posts);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      message: "Could not get community posts",
+    });
+  }
+});
+
 module.exports = router;

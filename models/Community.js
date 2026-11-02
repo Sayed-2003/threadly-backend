@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+
 const communitySchema = new mongoose.Schema(
   {
     name: {
@@ -34,3 +36,7 @@ const communitySchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+const Community = mongoose.model("Community",communitySchema)
+
+module.exports = Community;

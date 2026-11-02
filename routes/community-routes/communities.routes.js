@@ -4,7 +4,7 @@ const verifyToken = require("../../middleware/verifyToken");
 
 router.get("/", async (req, res) => {
   try {
-    const allCommunities = await Community.find();
+    const allCommunities = await Community.find({isDeleted:false});
     res.json(allCommunities);
   } catch (err) {
     console.log(err);
@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
 
 router.get("/:communityId", async (req, res) => {
   try {
-    const foundCommunity = await Community.findById(req.params.communityId);
+    const foundCommunity = await Community.findById(req.params.communityId,{isDeleted:false});
 
     if (!foundCommunity) {
       return res.status(404).json({ message: "Community not found" });

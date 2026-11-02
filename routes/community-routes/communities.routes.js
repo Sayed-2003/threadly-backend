@@ -4,8 +4,8 @@ const verifyToken = require("../../middleware/verifyToken");
 
 router.get("/", async (req, res) => {
   try {
-    const allCommunities = await Community.find({isDeleted:false});
-    res.json(allCommunities);
+    const allCommunities = await Community.find({ isDeleted: false });
+    res.status(200).json(allCommunities);
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Could not get communities" });
@@ -14,13 +14,17 @@ router.get("/", async (req, res) => {
 
 router.get("/:communityId", async (req, res) => {
   try {
-    const foundCommunity = await Community.findById(req.params.communityId,{isDeleted:false});
+    const foundCommunity = await Community.findById(req.params.communityId);
 
     if (!foundCommunity) {
       return res.status(404).json({ message: "Community not found" });
     }
 
-    res.json(foundCommunity);
+    if (foundCommunity && foundCommunity.isDeleted === true) {
+      return res.status(404).json({ message: "This Community is Deleted" });
+    }
+
+    res.status(200).json(foundCommunity);
   } catch (err) {
     console.log(err);
 
@@ -221,4 +225,5 @@ router.delete("/:communityId/membership", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Could not leave community" });
   }
 });
+
 module.exports = router;

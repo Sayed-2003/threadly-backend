@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Community = require("../../models/Community");
+const verifyToken = require("../../middleware/verifyToken");
 
 router.get("/", async (req, res) => {
   try {
@@ -11,7 +12,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:communityId", async (req, res) => {
+router.get("/:communityId", verifyToken, async (req, res) => {
   try {
     const foundCommunity = await Community.findById(req.params.communityId);
 
@@ -31,4 +32,42 @@ router.get("/:communityId", async (req, res) => {
   }
 });
 
+router.post("/", verifyToken, async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    if (!name || !description) {
+      return res.status(400).json({
+        message: "Name and description are required",
+      });
+    }
+
+    const existingCommunity = await Community.findOne({
+      name: name.toLowerCase().trim(),
+    });
+
+    if (existingCommunity) {
+      return res.status(409).json({
+        message: "Community name already exists",
+      });
+    }
+
+    const newCommunity = await Community.create({
+      name,
+      description,
+      owner: req.user._id,
+      members: [req.user._id],
+    });
+
+    res.status(201).json(newCommunity);
+  } catch (err) {
+    console.log(err);
+
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+
+    res.status(500).json({ message: "Could not create community" });
+  }
+});
 module.exports = router;

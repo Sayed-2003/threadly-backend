@@ -12,7 +12,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:communityId", verifyToken, async (req, res) => {
+router.get("/:communityId", async (req, res) => {
   try {
     const foundCommunity = await Community.findById(req.params.communityId);
 
@@ -68,6 +68,43 @@ router.post("/", verifyToken, async (req, res) => {
     }
 
     res.status(500).json({ message: "Could not create community" });
+  }
+});
+router.put("/:communityId", verifyToken, async (req, res) => {
+  try {
+    const foundCommunity = await Community.findById(req.params.communityId);
+
+    if (!foundCommunity) {
+      return res.status(404).json({ message: "Community not found" });
+    }
+
+    if (foundCommunity.owner.toString() !== req.user._id) {
+      return res.status(403).json({
+        message: "You cannot edit this community",
+      });
+    }
+
+    const { name, description } = req.body;
+
+    const updatedCommunity = await Community.findByIdAndUpdate(
+      req.params.communityId,
+      { name, description },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json(updatedCommunity);
+  } catch (err) {
+    console.log(err);
+
+    if (err.name === "CastError") {
+      return res.status(400).json({ message: "Invalid community ID" });
+    }
+
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+
+    res.status(500).json({ message: "Could not update community" });
   }
 });
 module.exports = router;

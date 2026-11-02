@@ -96,4 +96,76 @@ router.get("/:postId", async (req, res) => {
 });
 
 
+router.post("/", verifyToken, async (req, res) => {
+  try {
+    const { title, text, community } = req.body;
+
+    if (!title || !text || !community) {
+      return res.status(400).json({
+        message: "Title, text and community are required",
+      });
+    }
+
+    if (
+      typeof title !== "string" ||
+      typeof text !== "string" ||
+      !title.trim() ||
+      !text.trim()
+    ) {
+      return res.status(400).json({
+        message: "Title and text must be non-empty strings",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(community)) {
+      return res.status(400).json({
+        message: "Invalid community ID",
+      });
+    }
+
+    const foundCommunity = await Community.findOne({
+      _id: community,
+      isDeleted: false,
+    });
+
+    if (!foundCommunity) {
+      return res.status(404).json({
+        message: "Community not found",
+      });
+    }
+
+    const isMember = foundCommunity.members.some((member) => {
+      return member.toString() === req.user._id.toString();
+    });
+
+    if (!isMember) {
+      return res.status(403).json({
+        message: "You must join this community before posting",
+      });
+    }
+
+    const newPost = await Post.create({
+      title: title.trim(),
+      text: text.trim(),
+      community,
+      author: req.user._id,
+    });
+
+    res.status(201).json(newPost);
+  } catch (err) {
+    console.log(err);
+
+    if (err.name === "ValidationError") {
+      return res.status(400).json({
+        message: err.message,
+      });
+    }
+
+    res.status(500).json({
+      message: "Could not create post",
+    });
+  }
+});
+
+
 module.exports = router;

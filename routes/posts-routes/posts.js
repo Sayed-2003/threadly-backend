@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
       return post.community && !post.community.isDeleted;
     });
 
-    res.json(activePosts);
+    res.status(200).json(activePosts);
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Could not get posts" });
@@ -50,7 +50,7 @@ router.get("/community/:communityId", async (req, res) => {
       .populate("author", "username")
       .populate("community", "name");
 
-    res.json(posts);
+    res.status(200).json(posts);
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -58,5 +58,42 @@ router.get("/community/:communityId", async (req, res) => {
     });
   }
 });
+
+
+router.get("/:postId", async (req, res) => {
+  try {
+    const foundPost = await Post.findOne({
+      _id: req.params.postId,
+      isDeleted: false,
+    })
+      .populate("author", "username")
+      .populate("community", "name isDeleted");
+
+    if (
+      !foundPost ||
+      !foundPost.community ||
+      foundPost.community.isDeleted
+    ) {
+      return res.status(404).json({
+        message: "Post not found",
+      });
+    }
+
+    res.status(200).json(foundPost);
+  } catch (err) {
+    console.log(err);
+
+    if (err.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid post ID",
+      });
+    }
+
+    res.status(500).json({
+      message: "Could not get post",
+    });
+  }
+});
+
 
 module.exports = router;

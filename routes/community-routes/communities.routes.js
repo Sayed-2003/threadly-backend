@@ -1,11 +1,12 @@
 const router = require("express").Router();
 const Community = require("../../models/Community");
 const verifyToken = require("../../middleware/verifyToken");
+const Post = require("../../models/Post");
 
 router.get("/", async (req, res) => {
   try {
-    const allCommunities = await Community.find({isDeleted:false});
-    res.json(allCommunities);
+    const allCommunities = await Community.find({ isDeleted: false });
+    res.status(200).json(allCommunities);
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Could not get communities" });
@@ -14,13 +15,17 @@ router.get("/", async (req, res) => {
 
 router.get("/:communityId", async (req, res) => {
   try {
-    const foundCommunity = await Community.findById(req.params.communityId,{isDeleted:false});
+    const foundCommunity = await Community.findById(req.params.communityId);
 
     if (!foundCommunity) {
       return res.status(404).json({ message: "Community not found" });
     }
 
-    res.json(foundCommunity);
+    if (foundCommunity && foundCommunity.isDeleted === true) {
+      return res.status(404).json({ message: "This Community is Deleted" });
+    }
+
+    res.status(200).json(foundCommunity);
   } catch (err) {
     console.log(err);
 
@@ -165,9 +170,10 @@ router.delete("/:communityId", verifyToken, async (req, res) => {
         isDeleted: true,
         deletedAt: new Date(),
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
+    await Post.updateMany({community: foundCommunity._id},{isDeleted: true})
     res.status(200).json({ message: "Community deleted successfully" });
   } catch (err) {
     console.log(err);
@@ -176,6 +182,7 @@ router.delete("/:communityId", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Invalid community ID" });
     }
 
+    console.log(err)
     res.status(500).json({ message: "Could not delete community" });
   }
 });
@@ -221,4 +228,5 @@ router.delete("/:communityId/membership", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Could not leave community" });
   }
 });
+
 module.exports = router;

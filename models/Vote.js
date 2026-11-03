@@ -18,6 +18,14 @@ const voteSchema = new mongoose.Schema(
       required: true,
       enum: [1, -1],
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

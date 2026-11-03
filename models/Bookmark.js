@@ -13,6 +13,14 @@ const bookmarkSchema = new mongoose.Schema(
       ref: "Post",
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

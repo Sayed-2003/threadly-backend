@@ -9,9 +9,9 @@ const cors = require('cors')
 
 // Routes Import
 const authRoutes = require('./routes/auth.routes')
-const communityRoutes = require("./routes/community-routes/communities.routes");
-const postsRouter = require('./routes/posts-routes/posts.js');
-const commentRouter = require('./routes/comment-routes/comment.routes.js')
+const communityRoutes = require("./routes/community-routes/communities.routes.js");
+const postsRouter = require('./routes/posts-routes/posts.routes.js');
+const commentsRouter = require('./routes/comment-routes/comment.routes.js');
 
 
 
@@ -30,8 +30,7 @@ app.use(morgan('dev'))
 app.use('/auth',authRoutes)
 app.use("/communities", communityRoutes);
 app.use("/posts", postsRouter);
-app.use("/comment",commentRouter)
-
+app.use("/posts/:postId/comments", commentsRouter);
 
 // connect to database and listen on Port 3000
 async function startServer() {

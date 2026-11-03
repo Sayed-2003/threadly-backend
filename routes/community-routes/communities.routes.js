@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const Community = require("../../models/Community");
 const verifyToken = require("../../middleware/verifyToken");
+const Post = require("../../models/Post");
 
 router.get("/", async (req, res) => {
   try {
@@ -169,9 +170,10 @@ router.delete("/:communityId", verifyToken, async (req, res) => {
         isDeleted: true,
         deletedAt: new Date(),
       },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
+    await Post.updateMany({community: foundCommunity._id},{isDeleted: true})
     res.status(200).json({ message: "Community deleted successfully" });
   } catch (err) {
     console.log(err);
@@ -180,6 +182,7 @@ router.delete("/:communityId", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Invalid community ID" });
     }
 
+    console.log(err)
     res.status(500).json({ message: "Could not delete community" });
   }
 });

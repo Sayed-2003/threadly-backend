@@ -13,7 +13,7 @@ const communityRoutes = require("./routes/community-routes/communities.routes.js
 const postsRouter = require('./routes/posts-routes/posts.routes.js');
 const commentsRouter = require('./routes/comment-routes/comment.routes.js');
 const votesRouter = require('./routes/vote-routes/vote.routes.js')
-const bookmarksRouter = require("./routes/bookmark-routes/bookmark.routes.js");
+const bookmarksRouter = require("./routes/bookmarks-routes/bookmarks.routes.js");
 
 
 

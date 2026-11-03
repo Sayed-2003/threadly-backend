@@ -22,6 +22,14 @@ const commentSchema = new mongoose.Schema(
       ref: "Comment",
       default: null,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

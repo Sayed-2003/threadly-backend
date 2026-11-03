@@ -6,7 +6,8 @@ const Post = require("../../models/Post");
 const Community = require("../../models/Community");
 const verifyToken = require("../../middleware/verifyToken");
 const requireCommunityMember = require("../../middleware/requireCommunityMember");
-// GET vote counts and score (public)
+
+
 router.get("/votes", async (req, res) => {
     try {
         const { postId } = req.params;
@@ -52,12 +53,9 @@ router.get("/votes", async (req, res) => {
         });
     }
 });
-// PUT add or change vote
-router.put(
-    "/vote",
-    verifyToken,
-    requireCommunityMember,
-    async (req, res) => {
+
+
+router.put( "/vote", verifyToken, requireCommunityMember, async (req, res) => {
         try {
             const { postId } = req.params;
             const { value } = req.body;
@@ -96,12 +94,10 @@ router.put(
         }
     }
 );
-// DELETE remove vote (soft delete)
-router.delete(
-    "/vote",
-    verifyToken,
-    requireCommunityMember,
-    async (req, res) => {
+
+
+
+router.delete( "/vote", verifyToken, requireCommunityMember,async (req, res) => {
         try {
             const { postId } = req.params;
             const vote = await Vote.findOne({
@@ -128,4 +124,5 @@ router.delete(
         }
     }
 );
+
 module.exports = router;

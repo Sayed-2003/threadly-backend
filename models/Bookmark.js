@@ -31,9 +31,6 @@ bookmarkSchema.index(
   { unique: true }
 );
 
-const Bookmark = mongoose.model(
-  "Bookmark",
-  bookmarkSchema
-);
+const Bookmark = mongoose.model( "Bookmark", bookmarkSchema);
 
 module.exports = Bookmark;

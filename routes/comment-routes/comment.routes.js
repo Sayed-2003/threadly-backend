@@ -4,6 +4,7 @@ const Comment = require("../../models/Comment");
 const Post = require("../../models/Post");
 const Community = require("../../models/Community");
 const verifyToken = require("../../middleware/verifyToken");
+const requireCommunityMember = require("../../middleware/requireCommunityMember");
 
 
 router.get("/", async (req, res) => {
@@ -55,7 +56,7 @@ router.get("/", async (req, res) => {
 });
 
 
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", verifyToken,requireCommunityMember, async (req, res) => {
   try {
     const { postId } = req.params;
     const { text, parentComment } = req.body;
@@ -143,7 +144,7 @@ router.post("/", verifyToken, async (req, res) => {
 
 
 
-router.put("/:commentId", verifyToken, async (req, res) => {
+router.put("/:commentId", verifyToken,requireCommunityMember, async (req, res) => {
   try {
     const { postId, commentId } = req.params;
     const { text } = req.body;
@@ -224,7 +225,7 @@ router.put("/:commentId", verifyToken, async (req, res) => {
 
 
 
-router.delete("/:commentId", verifyToken, async (req, res) => {
+router.delete("/:commentId", verifyToken,requireCommunityMember, async (req, res) => {
   try {
     const { postId, commentId } = req.params;
 

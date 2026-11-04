@@ -80,17 +80,22 @@ router.get("/:postId", async (req, res) => {
       });
     }
 
-    const allVotes = await Vote.find({post: req.params.postId})
-const results = await Vote.aggregate([
-  {
-    $group: {
-      _id: "$value", // Group documents by the 'item' field
-      totalVotes: { $sum: "$value" }, // Sum up quantities
-    }
-  }
-]);
+const votes = await Vote.find({
+  post: req.params.postId,
+  isDeleted: false,
+});
 
-    res.status(200).json({post: foundPost, votes: results});
+const upvotes = votes.filter((vote) => vote.value === 1).length;
+const downvotes = votes.filter((vote) => vote.value === -1).length;
+
+return res.status(200).json({
+  post: foundPost,
+  votes: {
+    upvotes,
+    downvotes,
+    score: upvotes - downvotes,
+  },
+});
   } catch (err) {
     console.log(err);
 

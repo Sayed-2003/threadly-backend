@@ -2,6 +2,7 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 const Post = require("../../models/Post");
 const Community = require("../../models/Community");
+const Vote = require("../../models/Vote");
 const verifyToken = require("../../middleware/verifyToken");
 
 router.get("/", async (req, res) => {
@@ -79,7 +80,17 @@ router.get("/:postId", async (req, res) => {
       });
     }
 
-    res.status(200).json(foundPost);
+    const allVotes = await Vote.find({post: req.params.postId})
+const results = await Vote.aggregate([
+  {
+    $group: {
+      _id: "$value", // Group documents by the 'item' field
+      totalVotes: { $sum: "$value" }, // Sum up quantities
+    }
+  }
+]);
+
+    res.status(200).json({post: foundPost, votes: results});
   } catch (err) {
     console.log(err);
 

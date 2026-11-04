@@ -3,6 +3,8 @@ const Community = require("../../models/Community");
 const verifyToken = require("../../middleware/verifyToken");
 const Post = require("../../models/Post");
 const Comment = require("../../models/Comment")
+const Vote = require("../../models/Vote");
+const Bookmark = require("../../models/Bookmark");
 
 router.get("/", async (req, res) => {
   try {
@@ -164,39 +166,56 @@ router.delete("/:communityId", verifyToken, async (req, res) => {
     });
 
     if (!foundCommunity) {
-      return res.status(404).json({ message: "Community not found" });
+      return res.status(404).json({
+        message: "Community not found",
+      });
     }
 
-    if (foundCommunity.owner.toString() !== req.user._id) {
+    if (foundCommunity.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "You cannot delete this community",
       });
     }
 
-    await Community.findByIdAndUpdate(
-      req.params.communityId,
-      {
-        isDeleted: true,
-        deletedAt: new Date(),
-      },
-      { returnDocument: 'after', runValidators: true }
-    );
+    const deletedAt = new Date();
 
-    await Post.updateMany({community: foundCommunity._id},{isDeleted: true})
-    await Comment.updateMany({community: foundCommunity._id},{isDeleted: true})
+    
+    const posts = await Post.find({
+      community: foundCommunity._id,
+    }).select("_id");
+
+    const postIds = posts.map((post) => post._id);
+
+    
+    foundCommunity.isDeleted = true;
+    foundCommunity.deletedAt = deletedAt;
+    await foundCommunity.save();
 
 
-    res.status(200).json({ message: "Community deleted successfully" });
+    await Post.updateMany( { community: foundCommunity._id },  { $set: { isDeleted: true, deletedAt, },} );
+
+    await Comment.updateMany( { post: { $in: postIds } }, { $set: { isDeleted: true, deletedAt,},});
+
+    await Vote.updateMany( { post: { $in: postIds } },  { $set: {  isDeleted: true,  deletedAt,  },});
+
+    await Bookmark.updateMany({ post: { $in: postIds } },{ $set: {  isDeleted: true, deletedAt,  },} );
+
+    return res.status(200).json({
+      message: "Community and all related data deleted successfully",
+    });
 
   } catch (err) {
     console.log(err);
 
     if (err.name === "CastError") {
-      return res.status(400).json({ message: "Invalid community ID" });
+      return res.status(400).json({
+        message: "Invalid community ID",
+      });
     }
 
-    console.log(err)
-    res.status(500).json({ message: "Could not delete community" });
+    return res.status(500).json({
+      message: "Could not delete community",
+    });
   }
 });
 

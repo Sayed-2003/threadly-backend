@@ -84,7 +84,8 @@ router.post("/", verifyToken, async (req, res) => {
 
 router.put("/:communityId", verifyToken, async (req, res) => {
   try {
-    const foundCommunity = await Community.findById(req.params.communityId);
+
+    const foundCommunity = await Community.findOne({_id: req.params.communityId, isDeleted: false,});
 
     if (!foundCommunity) {
       return res.status(404).json({ message: "Community not found" });
@@ -123,7 +124,8 @@ router.put("/:communityId", verifyToken, async (req, res) => {
 
 router.put("/:communityId/membership", verifyToken, async (req, res) => {
   try {
-    const foundCommunity = await Community.findById(req.params.communityId);
+
+    const foundCommunity = await Community.findOne({ _id: req.params.communityId, isDeleted: false,});
 
     if (!foundCommunity) {
       return res.status(404).json({ message: "Community not found" });

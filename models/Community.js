@@ -5,7 +5,6 @@ const communitySchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -35,6 +34,16 @@ const communitySchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+communitySchema.index(
+  { name: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+    },
+  }
 );
 
 const Community = mongoose.model("Community",communitySchema)

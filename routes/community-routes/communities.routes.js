@@ -10,6 +10,7 @@ router.get("/", async (req, res) => {
   try {
     const allCommunities = await Community.find({ isDeleted: false });
     res.status(200).json(allCommunities);
+
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Could not get communities" });
@@ -30,6 +31,7 @@ router.get("/:communityId", async (req, res) => {
     }
 
     res.status(200).json(foundCommunity);
+
   } catch (err) {
     console.log(err);
 
@@ -52,9 +54,7 @@ router.post("/", verifyToken, async (req, res) => {
       });
     }
 
-    const existingCommunity = await Community.findOne({
-      name: name.toLowerCase().trim(),
-    });
+    const existingCommunity = await Community.findOne({ name: req.body.name, isDeleted: false,});
 
     if (existingCommunity) {
       return res.status(409).json({
@@ -70,12 +70,17 @@ router.post("/", verifyToken, async (req, res) => {
     });
 
     res.status(201).json(newCommunity);
+
   } catch (err) {
     console.log(err);
 
+    if (err.code === 11000) {
+  return res.status(409).json({
+    message: "Community name already exists",
+  });}
+
     if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message });
-    }
+      return res.status(400).json({ message: err.message }); }
 
     res.status(500).json({ message: "Could not create community" });
   }
@@ -116,6 +121,12 @@ router.put("/:communityId", verifyToken, async (req, res) => {
     if (err.name === "ValidationError") {
       return res.status(400).json({ message: err.message });
     }
+
+    if (err.code === 11000) {
+  return res.status(409).json({
+    message: "Community name already exists",
+  });
+}
 
     res.status(500).json({ message: "Could not update community" });
   }

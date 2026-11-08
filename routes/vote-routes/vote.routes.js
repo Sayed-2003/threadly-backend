@@ -54,6 +54,29 @@ router.get("/votes", async (req, res) => {
     }
 });
 
+router.get("/my-vote", verifyToken, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        if (!mongoose.isValidObjectId(postId)) {
+            return res.status(400).json({
+                message: "Invalid post ID",
+            });
+        }
+        const vote = await Vote.findOne({
+            user: req.user._id,
+            post: postId,
+            isDeleted: false,
+        });
+        return res.status(200).json({
+            value: vote ? vote.value : 0,
+        });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({
+            message: "Could not get your vote",
+        });
+    }
+});
 
 router.put( "/vote", verifyToken, requireCommunityMember, async (req, res) => {
         try {

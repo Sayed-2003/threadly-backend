@@ -13,6 +13,10 @@ const communitySchema = new mongoose.Schema(
       required: true,
       maxlength: 500,
     },
+    imageUrl: {
+      type: String,
+      default: "",
+    },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -33,7 +37,7 @@ const communitySchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 communitySchema.index(
@@ -43,9 +47,9 @@ communitySchema.index(
     partialFilterExpression: {
       isDeleted: false,
     },
-  }
+  },
 );
 
-const Community = mongoose.model("Community",communitySchema)
+const Community = mongoose.model("Community", communitySchema);
 
 module.exports = Community;

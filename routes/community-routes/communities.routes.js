@@ -5,6 +5,8 @@ const Post = require("../../models/Post");
 const Comment = require("../../models/Comment")
 const Vote = require("../../models/Vote");
 const Bookmark = require("../../models/Bookmark");
+const upload = require("../../middleware/upload");
+const fs = require("fs/promises");
 
 router.get("/", async (req, res) => {
   try {
@@ -44,93 +46,199 @@ router.get("/:communityId", async (req, res) => {
 });
 
 
-router.post("/", verifyToken, async (req, res) => {
-  try {
-    const { name, description } = req.body;
+router.post("/",verifyToken,(req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          message:
+            err.code === "LIMIT_FILE_SIZE"
+              ? "Image must be 5 MB or smaller"
+              : err.message,
+        });
+      }
 
-    if (!name || !description) {
-      return res.status(400).json({
-        message: "Name and description are required",
-      });
-    }
-
-    const existingCommunity = await Community.findOne({ name: req.body.name, isDeleted: false,});
-
-    if (existingCommunity) {
-      return res.status(409).json({
-        message: "Community name already exists",
-      });
-    }
-
-    const newCommunity = await Community.create({
-      name,
-      description,
-      owner: req.user._id,
-      members: [req.user._id],
+      next();
     });
+  },
+  async (req, res) => {
+    let communityCreated = false;
 
-    res.status(201).json(newCommunity);
+    try {
+      const { name, description } = req.body;
 
-  } catch (err) {
-    console.log(err);
+      if (!name || !description) {
+        return res.status(400).json({
+          message: "Name and description are required",
+        });
+      }
 
-    if (err.code === 11000) {
-  return res.status(409).json({
-    message: "Community name already exists",
-  });}
+      const existingCommunity = await Community.findOne({
+        name: name.trim().toLowerCase(),
+        isDeleted: false,
+      });
 
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message }); }
+      if (existingCommunity) {
+        return res.status(409).json({
+          message: "Community name already exists",
+        });
+      }
 
-    res.status(500).json({ message: "Could not create community" });
-  }
-});
+      const newCommunity = await Community.create({
+        name,
+        description,
+        imageUrl: req.file ? `/uploads/${req.file.filename}` : "",
+        owner: req.user._id,
+        members: [req.user._id],
+      });
 
+      communityCreated = true;
 
-router.put("/:communityId", verifyToken, async (req, res) => {
-  try {
+      res.status(201).json(newCommunity);
+    } catch (err) {
+      console.log(err);
 
-    const foundCommunity = await Community.findOne({_id: req.params.communityId, isDeleted: false,});
+      if (err.code === 11000) {
+        return res.status(409).json({
+          message: "Community name already exists",
+        });
+      }
 
-    if (!foundCommunity) {
-      return res.status(404).json({ message: "Community not found" });
+      if (err.name === "ValidationError") {
+        return res.status(400).json({
+          message: err.message,
+        });
+      }
+
+      res.status(500).json({
+        message: "Could not create community",
+      });
+    } finally {
+      if (req.file && !communityCreated) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.log("Could not remove unused image:", cleanupError);
+        }
+      }
     }
+  }
+);
 
-    if (foundCommunity.owner.toString() !== req.user._id) {
-      return res.status(403).json({
-        message: "You cannot edit this community",
+
+router.put("/:communityId",verifyToken,async (req, res, next) => {
+    try {
+      const community = await Community.findOne({
+        _id: req.params.communityId,
+        isDeleted: false,
+      });
+
+      if (!community) {
+        return res.status(404).json({
+          message: "Community not found",
+        });
+      }
+
+      if (community.owner.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          message: "You cannot edit this community",
+        });
+      }
+
+      next();
+    } catch (err) {
+      console.log(err);
+
+      if (err.name === "CastError") {
+        return res.status(400).json({
+          message: "Invalid community ID",
+        });
+      }
+
+      res.status(500).json({
+        message: "Could not load community",
       });
     }
+  },
+  (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({
+          message:
+            err.code === "LIMIT_FILE_SIZE"
+              ? "Image must be 5 MB or smaller"
+              : err.message,
+        });
+      }
 
-    const { name, description } = req.body;
+      next();
+    });
+  },
+  async (req, res) => {
+    let communityUpdated = false;
 
-    const updatedCommunity = await Community.findByIdAndUpdate(
-      req.params.communityId,
-      { name, description },
-      { new: true, runValidators: true }
-    );
+    try {
+      const { name, description } = req.body;
 
-    res.status(200).json(updatedCommunity);
-  } catch (err) {
-    console.log(err);
+      if (!name || !description) {
+        return res.status(400).json({
+          message: "Name and description are required",
+        });
+      }
 
-    if (err.name === "CastError") {
-      return res.status(400).json({ message: "Invalid community ID" });
+      const updates = { name, description };
+
+      if (req.file) {
+        updates.imageUrl = `/uploads/${req.file.filename}`;
+      }
+
+      const updatedCommunity = await Community.findOneAndUpdate(
+        {
+          _id: req.params.communityId,
+          owner: req.user._id,
+          isDeleted: false,
+        },
+        updates,
+        { new: true, runValidators: true }
+      );
+
+      if (!updatedCommunity) {
+        return res.status(404).json({
+          message: "Community is no longer available to edit",
+        });
+      }
+
+      communityUpdated = true;
+
+      res.status(200).json(updatedCommunity);
+    } catch (err) {
+      console.log(err);
+
+      if (err.code === 11000) {
+        return res.status(409).json({
+          message: "Community name already exists",
+        });
+      }
+
+      if (err.name === "ValidationError") {
+        return res.status(400).json({
+          message: err.message,
+        });
+      }
+
+      res.status(500).json({
+        message: "Could not update community",
+      });
+    } finally {
+      if (req.file && !communityUpdated) {
+        try {
+          await fs.unlink(req.file.path);
+        } catch (cleanupError) {
+          console.log("Could not remove unused image:", cleanupError);
+        }
+      }
     }
-
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ message: err.message });
-    }
-
-    if (err.code === 11000) {
-  return res.status(409).json({
-    message: "Community name already exists",
-  });
-}
-
-    res.status(500).json({ message: "Could not update community" });
   }
-});
+);
 
 
 router.put("/:communityId/membership", verifyToken, async (req, res) => {

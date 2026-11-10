@@ -4,6 +4,8 @@ const Post = require("../../models/Post");
 const Community = require("../../models/Community");
 const Vote = require("../../models/Vote");
 const verifyToken = require("../../middleware/verifyToken");
+const upload = require("../../middleware/upload");
+const fs = require("fs/promises");
 
 router.get("/", async (req, res) => {
   try {
@@ -112,7 +114,19 @@ return res.status(200).json({
 });
 
 
-router.post("/", verifyToken, async (req, res) => {
+router.post("/", verifyToken, (req, res, next) => {
+  upload.single("image")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        message: err.code === "LIMIT_FILE_SIZE"
+          ? "Image must be 5 MB or smaller"
+          : err.message,
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
+  let postCreated = false;
   try {
     const { title, text, community } = req.body;
 
@@ -165,8 +179,10 @@ router.post("/", verifyToken, async (req, res) => {
       text: text.trim(),
       community,
       author: req.user._id,
+      imageUrl: req.file ? `/uploads/${req.file.filename}` : "",
     });
 
+    postCreated = true;
     res.status(201).json(newPost);
   } catch (err) {
     console.log(err);
@@ -180,11 +196,19 @@ router.post("/", verifyToken, async (req, res) => {
     res.status(500).json({
       message: "Could not create post",
     });
+  } finally {
+    if (req.file && !postCreated) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.log("Could not remove unused image:", cleanupError);
+      }
+    }
   }
 });
 
 
-router.put("/:postId", verifyToken, async (req, res) => {
+router.put("/:postId", verifyToken, async (req, res, next) => {
   try {
     const foundPost = await Post.findOne({
       _id: req.params.postId,
@@ -214,11 +238,33 @@ router.put("/:postId", verifyToken, async (req, res) => {
       });
     }
 
+    next();
+  } catch (err) {
+    console.log(err);
+    if (err.name === "CastError") {
+      return res.status(400).json({ message: "Invalid post ID" });
+    }
+    res.status(500).json({ message: "Could not load post" });
+  }
+}, (req, res, next) => {
+  upload.single("image")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        message: err.code === "LIMIT_FILE_SIZE"
+          ? "Image must be 5 MB or smaller"
+          : err.message,
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
+  let postUpdated = false;
+  try {
     const { title, text } = req.body;
 
-    if (title === undefined && text === undefined) {
+    if (title === undefined && text === undefined && !req.file) {
       return res.status(400).json({
-        message: "Title or text is required",
+        message: "Title, text or image is required",
       });
     }
 
@@ -242,12 +288,25 @@ router.put("/:postId", verifyToken, async (req, res) => {
       updates.text = text.trim();
     }
 
-    const updatedPost = await Post.findByIdAndUpdate(
-      req.params.postId,
+    if (req.file) {
+      updates.imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const updatedPost = await Post.findOneAndUpdate(
+      {
+        _id: req.params.postId,
+        author: req.user._id,
+        isDeleted: false,
+      },
       updates,
       { new: true, runValidators: true }
     );
 
+    if (!updatedPost) {
+      return res.status(404).json({ message: "Post is no longer available to edit" });
+    }
+
+    postUpdated = true;
     res.status(200).json(updatedPost);
   } catch (err) {
     console.log(err);
@@ -267,6 +326,14 @@ router.put("/:postId", verifyToken, async (req, res) => {
     res.status(500).json({
       message: "Could not update post",
     });
+  } finally {
+    if (req.file && !postUpdated) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch (cleanupError) {
+        console.log("Could not remove unused image:", cleanupError);
+      }
+    }
   }
 });
 
